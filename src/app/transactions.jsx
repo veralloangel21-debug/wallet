@@ -22,7 +22,7 @@ export default function TransactionsScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
         data={visibleTransactions}
         keyExtractor={(item) => item.key}
@@ -61,13 +61,11 @@ export default function TransactionsScreen() {
         )}
         ListEmptyComponent={<Text style={styles.empty}>No transactions to show.</Text>}
       />
-      <View style={{ marginBottom: insets.bottom }}>
-        <BottomNav items={[
-          { key: 'home', label: 'Home', onPress: () => router.replace('/home') },
-          { key: 'transactions', label: 'Transactions', active: true, onPress: () => {} },
-          { key: 'logout', label: 'Log Out', onPress: () => router.replace('/') },
-        ]} />
-      </View>
+      <BottomNav items={[
+        { key: 'home', label: 'Home', onPress: () => router.replace('/home') },
+        { key: 'transactions', label: 'Transactions', active: true, onPress: () => {} },
+        { key: 'logout', label: 'Log Out', onPress: () => router.replace('/') },
+      ]} />
     </View>
   );
 }

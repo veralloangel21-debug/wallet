@@ -9,8 +9,8 @@ import BottomNav from "../components/BottomNav.jsx";
 import { colors } from "../constants/theme";
 import { transactions } from "../constants/transactions";
 
-const quickActions = [
-  { key: "add", icon: "＋", label: "Add Money", onPress: () => {} },
+const quickActions = (onAddMoney) => [
+  { key: "add", icon: "＋", label: "Add Money", onPress: onAddMoney },
   { key: "send", icon: "↗", label: "Send", onPress: () => {} },
   { key: "pay", icon: "▣", label: "Pay", onPress: () => {} },
   { key: "receive", icon: "↻", label: "Receive", onPress: () => {} },
@@ -40,7 +40,7 @@ export default function HomeScreen() {
         <BalanceCard balance="₱12,500.00" account="•••• 4582" />
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <QuickActions actions={quickActions} />
+        <QuickActions actions={quickActions(() => router.push('/add-money'))} />
 
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
         {transactions.map((t) => (

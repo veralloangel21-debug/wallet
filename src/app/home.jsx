@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import WelcomeHeader from "../components/WelcomeHeader.jsx";
 import BalanceCard from "../components/BalanceCard.jsx";
@@ -7,6 +7,7 @@ import QuickActions from "../components/QuickActions.jsx";
 import TransactionItem from "../components/TransactionItem.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import { colors } from "../constants/theme";
+import { transactions } from "../constants/transactions";
 
 const quickActions = [
   { key: "add", icon: "＋", label: "Add Money", onPress: () => {} },
@@ -15,17 +16,12 @@ const quickActions = [
   { key: "receive", icon: "↻", label: "Receive", onPress: () => {} },
 ];
 
-const transactions = [
-  { key: "1", title: "Coffee Shop", date: "Today, 10:30 AM", amount: "₱150.00", type: "expense" },
-  { key: "2", title: "Money Received", date: "Yesterday", amount: "₱1,000.00", type: "income" },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
 
   const navItems = [
     { key: "home", label: "Home", active: true, onPress: () => {} },
-    { key: "transactions", label: "Transactions", onPress: () => {} },
+    { key: "transactions", label: "Transactions", onPress: () => router.push('/transactions') },
     { key: "logout", label: "Log Out", onPress: () => router.replace('/') },
   ];
 
@@ -48,13 +44,15 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
         {transactions.map((t) => (
-          <TransactionItem
+          <TouchableOpacity
             key={t.key}
-            title={t.title}
-            date={t.date}
-            amount={t.amount}
-            type={t.type}
-          />
+            accessibilityRole="button"
+            accessibilityLabel={`View details for ${t.title}`}
+            onPress={() => router.push(`/details/${t.key}`)}
+            activeOpacity={0.7}
+          >
+            <TransactionItem title={t.title} date={t.date} amount={t.amount} type={t.type} />
+          </TouchableOpacity>
         ))}
       </ScrollView>
 

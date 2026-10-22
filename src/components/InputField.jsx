@@ -30,7 +30,6 @@ export default function InputField({
 
       {showIcon ? (
         <View style={styles.iconContainer}>
-          <View style={styles.iconPlaceholder} />
           <TextInput
             style={styles.inputWithIcon}
             placeholder={placeholder}
@@ -111,12 +110,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingHorizontal: 10,
     height: '100%',
-  },
-  iconPlaceholder: {
-    width: 20,
-    height: 20,
-    backgroundColor: colors.iconPlaceholder,
-    borderRadius: 4,
   },
   toggle: {
     padding: 6,

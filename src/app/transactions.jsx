@@ -29,6 +29,14 @@ export default function TransactionsScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Text style={styles.backText}>‹ Back</Text>
+            </TouchableOpacity>
             <Text accessibilityRole="header" style={styles.title}>Transactions</Text>
             <Text style={styles.subtitle}>Sample transaction history</Text>
             <View style={styles.filters}>
@@ -68,6 +76,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.screenBg },
   content: { padding: 24, paddingBottom: 110 },
   title: { fontSize: 28, fontWeight: 'bold', color: colors.darkText },
+  backButton: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 4, marginBottom: 8 },
+  backText: { color: colors.accentBlue, fontSize: 16, fontWeight: '600' },
   subtitle: { color: colors.textMutedAlt, marginTop: 8 },
   filters: { flexDirection: 'row', gap: 8, marginVertical: 24 },
   filter: { flex: 1, minHeight: 48, justifyContent: 'center', alignItems: 'center', borderRadius: 12, backgroundColor: colors.white },

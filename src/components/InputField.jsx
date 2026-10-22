@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors } from '../constants/theme';
 
 // One reusable input for every field in the app (plain text, email, phone,
@@ -15,6 +15,8 @@ export default function InputField({
   autoCapitalize,
   secureTextEntry,
   showIcon,
+  showPasswordToggle,
+  onToggleSecureTextEntry,
   labelRight,
   inputStyle,
   containerStyle,
@@ -34,9 +36,21 @@ export default function InputField({
             placeholder={placeholder}
             placeholderTextColor={colors.placeholder}
             secureTextEntry={secureTextEntry}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
             value={value}
             onChangeText={onChangeText}
           />
+          {showPasswordToggle ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={secureTextEntry ? 'Show password' : 'Hide password'}
+              onPress={onToggleSecureTextEntry}
+              style={styles.toggle}
+            >
+              <Text style={styles.eye}>{secureTextEntry ? '👁' : '🙈'}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : (
         <TextInput
@@ -98,5 +112,11 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: colors.iconPlaceholder,
     borderRadius: 4,
+  },
+  toggle: {
+    padding: 6,
+  },
+  eye: {
+    fontSize: 18,
   },
 });

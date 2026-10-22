@@ -11,6 +11,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,8 +57,10 @@ export default function LoginScreen() {
           <InputField
             label="Password"
             placeholder="Enter your password"
-            secureTextEntry
+            secureTextEntry={!passwordVisible}
             showIcon
+            showPasswordToggle
+            onToggleSecureTextEntry={() => setPasswordVisible((visible) => !visible)}
             value={password}
             onChangeText={setPassword}
             containerStyle={styles.field}
@@ -141,6 +144,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
   },
+  
   button: {
     width: '100%',
     height: 40,

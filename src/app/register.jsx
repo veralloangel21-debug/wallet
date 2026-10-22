@@ -21,6 +21,7 @@ const initialState = fields.reduce((acc, f) => ({ ...acc, [f.key]: '' }), {});
 export default function RegisterScreen() {
   const router = useRouter();
   const [values, setValues] = useState(initialState);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   const handleChange = (key) => (text) =>
     setValues((prev) => ({ ...prev, [key]: text }));
@@ -45,7 +46,9 @@ export default function RegisterScreen() {
             label={field.label}
             placeholder={field.placeholder}
             keyboardType={field.keyboardType}
-            secureTextEntry={field.secureTextEntry}
+            secureTextEntry={field.secureTextEntry && !visiblePasswords[field.key]}
+            showPasswordToggle={field.secureTextEntry}
+            onToggleSecureTextEntry={() => setVisiblePasswords((visible) => ({ ...visible, [field.key]: !visible[field.key] }))}
             value={values[field.key]}
             onChangeText={handleChange(field.key)}
           />

@@ -48,7 +48,12 @@ export default function InputField({
               onPress={onToggleSecureTextEntry}
               style={styles.toggle}
             >
-              <Text style={styles.eye}>{secureTextEntry ? '👁' : '🙈'}</Text>
+              <View style={styles.eyeIcon}>
+                <View style={styles.eyeShape}>
+                  <View style={styles.eyePupil} />
+                </View>
+                {secureTextEntry ? <View style={styles.eyeSlash} /> : null}
+              </View>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -116,7 +121,33 @@ const styles = StyleSheet.create({
   toggle: {
     padding: 6,
   },
-  eye: {
-    fontSize: 18,
+  eyeIcon: {
+    width: 27,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eyeShape: {
+    width: 25,
+    height: 15,
+    borderWidth: 3,
+    borderColor: colors.textMuted,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eyePupil: {
+    width: 6,
+    height: 6,
+    borderRadius: 6,
+    backgroundColor: colors.textMuted,
+  },
+  eyeSlash: {
+    position: 'absolute',
+    width: 31,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.textMuted,
+    transform: [{ rotate: '45deg' }],
   },
 });

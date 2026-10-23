@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Logo from '../components/Logo.jsx';
-import InputField from '../components/InputField.jsx';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Checkbox from '../components/Checkbox.jsx';
+import InputField from '../components/InputField.jsx';
+import Logo from '../components/Logo.jsx';
 import PrimaryButton from '../components/PrimaryButton.jsx';
 import { colors, shadow } from '../constants/theme.js';
 

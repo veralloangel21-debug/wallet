@@ -28,7 +28,7 @@ export default function RegisterScreen() {
 
   const handleSubmit = () => {
     // Register API call goes here once the backend is wired up.
-    router.push('/index');
+    router.replace('/');
   };
 
   return (
@@ -61,7 +61,7 @@ export default function RegisterScreen() {
           style={styles.button}
         />
 
-        <TouchableOpacity onPress={() => router.push('/index')} style={styles.link}>
+        <TouchableOpacity onPress={() => router.replace('/')} style={styles.link}>
           <Text style={styles.linkText}>Already have an account? Sign in</Text>
         </TouchableOpacity>
       </View>

@@ -1,14 +1,13 @@
-import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useRouter } from "expo-router";
+
+import AuthInput from "../components/AuthInput";
+import AuthScreen from "../components/AuthScreen";
+import CarryButton from "../components/CarryButton";
+
+import { carryColors as colors } from "../constants/theme";
 import { registerUser } from "../services/authStorage";
 
 const initialForm = {
@@ -22,47 +21,108 @@ const initialForm = {
 };
 
 const fields = [
-  ["firstname", "First name"],
-  ["lastname", "Last name"],
-  ["username", "Username"],
-  ["email", "Email"],
-  ["contactNumber", "Contact number"],
-  ["password", "Password"],
-  ["confirmPassword", "Confirm password"],
+  {
+    key: "firstname",
+    label: "First Name",
+    placeholder: "Enter your first name",
+    icon: "person-outline",
+    autoCapitalize: "words",
+  },
+  {
+    key: "lastname",
+    label: "Last Name",
+    placeholder: "Enter your last name",
+    icon: "person-outline",
+    autoCapitalize: "words",
+  },
+  {
+    key: "username",
+    label: "Username",
+    placeholder: "Choose a username",
+    icon: "at-outline",
+  },
+  {
+    key: "email",
+    label: "Email Address",
+    placeholder: "Enter your email",
+    icon: "mail-outline",
+    keyboardType: "email-address",
+  },
+  {
+    key: "contactNumber",
+    label: "Phone Number",
+    placeholder: "09XXXXXXXXX",
+    icon: "call-outline",
+    keyboardType: "phone-pad",
+  },
+  {
+    key: "password",
+    label: "Password",
+    placeholder: "Create a password",
+    icon: "lock-closed-outline",
+    secure: true,
+  },
+  {
+    key: "confirmPassword",
+    label: "Confirm Password",
+    placeholder: "Re-enter your password",
+    icon: "lock-closed-outline",
+    secure: true,
+  },
 ];
 
 export default function RegisterScreen() {
   const router = useRouter();
+
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
 
   function updateField(key, value) {
-    setForm((previous) => ({
-      ...previous,
+    setForm((current) => ({
+      ...current,
       [key]: value,
     }));
   }
 
-  async function handleSignUp() {
-    if (loading) return;
-
+  function validateForm() {
     if (Object.values(form).some((value) => !value.trim())) {
-      Alert.alert("Missing information", "Please complete all fields.");
-      return;
+      return "Please complete all fields.";
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      Alert.alert("Invalid email", "Enter a valid email address.");
-      return;
+    if (form.username.trim().length < 3) {
+      return "Username must contain at least 3 characters.";
     }
 
-    if (form.password.length < 6) {
-      Alert.alert("Weak password", "Use at least 6 characters.");
-      return;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(form.email.trim())) {
+      return "Please enter a valid email address.";
+    }
+
+    const phone = form.contactNumber.trim();
+
+    if (!/^09\d{9}$/.test(phone)) {
+      return "Enter a valid 11-digit Philippine mobile number.";
+    }
+
+    if (form.password.length < 8) {
+      return "Password must contain at least 8 characters.";
     }
 
     if (form.password !== form.confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
+      return "Passwords do not match.";
+    }
+
+    return null;
+  }
+
+  async function handleRegister() {
+    if (loading) return;
+
+    const error = validateForm();
+
+    if (error) {
+      Alert.alert("Registration Error", error);
       return;
     }
 
@@ -72,8 +132,8 @@ export default function RegisterScreen() {
       await registerUser(form);
 
       Alert.alert(
-        "Account Created",
-        "Registration successful! You can now log in.",
+        "Account Created!",
+        "Your Carry account has been created. You can now log in.",
         [
           {
             text: "Go to Login",
@@ -84,7 +144,7 @@ export default function RegisterScreen() {
     } catch (error) {
       Alert.alert(
         "Registration Failed",
-        error.message || "Something went wrong.",
+        error.message || "Unable to create your account.",
       );
     } finally {
       setLoading(false);
@@ -92,93 +152,70 @@ export default function RegisterScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.screen}
-      keyboardShouldPersistTaps="handled"
+    <AuthScreen
+      title="Create an Account"
+      subtitle="Join Carry and bring your wallet everywhere."
     >
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Sign up for MY E-WALLET</Text>
-
-      {fields.map(([key, label]) => (
-        <TextInput
-          key={key}
-          style={styles.input}
-          placeholder={label}
-          value={form[key]}
-          onChangeText={(value) => updateField(key, value)}
-          autoCapitalize={
-            key === "email" || key === "username" ? "none" : "sentences"
-          }
-          keyboardType={
-            key === "email"
-              ? "email-address"
-              : key === "contactNumber"
-                ? "phone-pad"
-                : "default"
-          }
-          secureTextEntry={key.toLowerCase().includes("password")}
+      {/* REGISTRATION FIELDS */}
+      {fields.map((field) => (
+        <AuthInput
+          key={field.key}
+          label={field.label}
+          placeholder={field.placeholder}
+          icon={field.icon}
+          keyboardType={field.keyboardType}
+          autoCapitalize={field.autoCapitalize}
+          secure={field.secure}
+          value={form[field.key]}
+          onChangeText={(value) => updateField(field.key, value)}
           editable={!loading}
         />
       ))}
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleSignUp}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? "Creating Account..." : "Sign Up"}
-        </Text>
-      </TouchableOpacity>
+      {/* REGISTER BUTTON */}
+      <View style={styles.buttonContainer}>
+        <CarryButton
+          title={loading ? "Creating Account..." : "Register"}
+          onPress={handleRegister}
+          disabled={loading}
+          showArrow={!loading}
+        />
+      </View>
 
-      <TouchableOpacity onPress={() => router.replace("/login")}>
-        <Text style={styles.link}>Already have an account? Log In</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      {/* LOGIN LINK */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account?</Text>
+
+        <Pressable onPress={() => router.replace("/login")}>
+          <Text style={styles.link}>Log In</Text>
+        </Pressable>
+      </View>
+    </AuthScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flexGrow: 1,
-    backgroundColor: "#F2F8F3",
-    padding: 24,
-    paddingTop: 65,
+  buttonContainer: {
+    marginTop: 12,
   },
-  title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#147F4C",
-  },
-  subtitle: {
-    textAlign: "center",
-    color: "#667",
-    marginBottom: 26,
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#D5E5DA",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: "#15965D",
-    padding: 16,
-    borderRadius: 12,
+
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 28,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "bold",
+
+  footerText: {
+    fontSize: 14,
+    color: colors.muted,
   },
+
   link: {
-    textAlign: "center",
-    color: "#148C50",
-    marginTop: 24,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.primary,
   },
 });

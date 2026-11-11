@@ -1,42 +1,58 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors } from '../constants/theme';
+import { Ionicons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-// actions: [{ key, icon, label, onPress }]
+import { carryColors as colors } from "../constants/theme";
 export default function QuickActions({ actions }) {
   return (
-    <View style={styles.row}>
+    <View style={styles.container}>
       {actions.map((action) => (
-        <TouchableOpacity key={action.key} style={styles.action} onPress={action.onPress}>
-          <Text style={styles.icon}>{action.icon}</Text>
-          <Text style={styles.actionText}>{action.label}</Text>
-        </TouchableOpacity>
+        <Pressable
+          key={action.key}
+          style={styles.action}
+          onPress={action.onPress}
+          accessibilityRole="button"
+        >
+          <View style={styles.iconBox}>
+            <Ionicons name={action.icon} size={25} color={colors.primary} />
+          </View>
+
+          <Text style={styles.label}>{action.label}</Text>
+        </Pressable>
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
+  container: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+    marginVertical: 24,
   },
+
   action: {
-    backgroundColor: colors.white,
-    width: '23%',
-    paddingVertical: 15,
-    borderRadius: 15,
-    alignItems: 'center',
+    flex: 1,
+    alignItems: "center",
+    gap: 9,
   },
-  icon: {
-    fontSize: 25,
-    color: colors.accentBlue,
-    marginBottom: 7,
+
+  iconBox: {
+    width: "100%",
+    maxWidth: 70,
+    height: 62,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  actionText: {
+
+  label: {
+    color: colors.text,
     fontSize: 11,
-    color: '#444444',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

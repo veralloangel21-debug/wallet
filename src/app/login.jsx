@@ -1,14 +1,14 @@
-import { useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+
+import AuthInput from "../components/AuthInput";
+import AuthScreen from "../components/AuthScreen";
+import CarryButton from "../components/CarryButton";
+
+import { carryColors as colors } from "../constants/theme";
 import { loginUser } from "../services/authStorage";
 
 export default function LoginScreen() {
@@ -22,7 +22,10 @@ export default function LoginScreen() {
     if (loading) return;
 
     if (!username.trim() || !password) {
-      Alert.alert("Missing information", "Enter your username and password.");
+      Alert.alert(
+        "Missing Information",
+        "Please enter your username and password.",
+      );
       return;
     }
 
@@ -45,92 +48,101 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Log in to MY E-WALLET</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        autoCapitalize="none"
-        autoCorrect={false}
+    <AuthScreen
+      title="Welcome Back!"
+      subtitle="Log in to Carry and continue managing your money."
+    >
+      {/* USERNAME */}
+      <AuthInput
+        label="Username"
+        placeholder="Enter your username"
+        icon="person-outline"
         value={username}
         onChangeText={setUsername}
         editable={!loading}
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
+      {/* PASSWORD */}
+      <AuthInput
+        label="Password"
+        placeholder="Enter your password"
+        icon="lock-closed-outline"
         value={password}
         onChangeText={setPassword}
+        secure
         editable={!loading}
       />
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? "Logging In..." : "Log In"}
+      {/* LOGIN BUTTON */}
+      <View style={styles.buttonContainer}>
+        <CarryButton
+          title={loading ? "Logging In..." : "Log In"}
+          onPress={handleLogin}
+          disabled={loading}
+          showArrow={!loading}
+        />
+      </View>
+
+      {/* REGISTER LINK */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Don't have an account?</Text>
+
+        <Pressable onPress={() => router.push("/register")}>
+          <Text style={styles.link}>Register</Text>
+        </Pressable>
+      </View>
+
+      {/* SECURITY NOTE */}
+      <View style={styles.security}>
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={17}
+          color={colors.primary}
+        />
+
+        <Text style={styles.securityText}>
+          Carry — Your Wallet, Everywhere.
         </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text style={styles.link}>Don't have an account? Sign Up</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.back()}>
-        <Text style={styles.link}>Back</Text>
-      </TouchableOpacity>
-    </View>
+      </View>
+    </AuthScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#F2F8F3",
+  buttonContainer: {
+    marginTop: 14,
+  },
+
+  footer: {
+    flexDirection: "row",
     justifyContent: "center",
-    padding: 24,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "#147F4C",
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#667",
-    textAlign: "center",
-    marginBottom: 35,
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#D5E5DA",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 14,
-  },
-  button: {
-    backgroundColor: "#15965D",
-    padding: 16,
-    borderRadius: 12,
     alignItems: "center",
-    marginTop: 10,
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 28,
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 17,
+
+  footerText: {
+    fontSize: 14,
+    color: colors.muted,
   },
+
   link: {
-    color: "#148C50",
-    textAlign: "center",
-    marginTop: 22,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+
+  security: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 42,
+  },
+
+  securityText: {
+    fontSize: 12,
+    color: colors.muted,
   },
 });

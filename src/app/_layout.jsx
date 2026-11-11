@@ -1,5 +1,14 @@
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router";
+import { WalletProvider } from "../contexts/WalletContext";
 
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <WalletProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+    </WalletProvider>
+  );
 }

@@ -1,171 +1,323 @@
-import React, { useState } from 'react';
+import { useState } from "react";
 import {
-  FlatList,
+  Alert,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import BottomNav from '../components/BottomNav';
-import PrimaryButton from '../components/PrimaryButton';
-import { colors, shadow } from '../constants/theme';
+} from "react-native";
 
-const initialDeposits = [
-  { id: 'deposit-1', source: 'Salary', amount: '25000', note: 'Monthly salary' },
-  { id: 'deposit-2', source: 'Bank transfer', amount: '1000', note: 'Emergency fund' },
-];
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const emptyForm = { source: '', amount: '', note: '' };
+import CarryButton from "../components/CarryButton";
+import { carryColors as colors } from "../constants/theme";
+import { useWallet } from "../contexts/WalletContext";
+import { formatPeso } from "../utils/currency";
+
+const quickAmounts = [100, 500, 1000, 5000];
 
 export default function AddMoneyScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const [deposits, setDeposits] = useState(initialDeposits);
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState(null);
-  const [error, setError] = useState('');
+  const { wallet, loading, addMoney } = useWallet();
 
-  const updateField = (field) => (value) => setForm((current) => ({ ...current, [field]: value }));
+  const [source, setSource] = useState("");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const saveDeposit = () => {
-    const amount = Number(form.amount);
-    if (!form.source.trim() || !Number.isFinite(amount) || amount <= 0) {
-      setError('Enter a source and an amount greater than zero.');
+  async function handleAddMoney() {
+    if (saving || loading || !wallet) {
+      if (!saving) {
+        Alert.alert("Please wait", "Wallet is not ready.");
+      }
       return;
     }
 
-    const nextDeposit = {
-      id: editingId || `deposit-${Date.now()}`,
-      source: form.source.trim(),
-      amount: amount.toFixed(2),
-      note: form.note.trim(),
-    };
+    setSaving(true);
 
-    setDeposits((current) => editingId
-      ? current.map((deposit) => (deposit.id === editingId ? nextDeposit : deposit))
-      : [nextDeposit, ...current]);
-    setForm(emptyForm);
-    setEditingId(null);
-    setError('');
-  };
+    try {
+      const updated = await addMoney(amount, source, note);
 
-  const editDeposit = (deposit) => {
-    setForm({ source: deposit.source, amount: deposit.amount, note: deposit.note });
-    setEditingId(deposit.id);
-    setError('');
-  };
-
-  const deleteDeposit = (id) => {
-    setDeposits((current) => current.filter((deposit) => deposit.id !== id));
-    if (editingId === id) {
-      setForm(emptyForm);
-      setEditingId(null);
+      Alert.alert(
+        "Money Added!",
+        `${formatPeso(Number(amount) * 100)} has been added to your demo wallet.\n\nNew Balance: ${formatPeso(updated.balanceCents)}`,
+        [
+          {
+            text: "Back to Home",
+            onPress: () => router.replace("/home"),
+          },
+        ],
+      );
+    } catch (error) {
+      Alert.alert(
+        "Unable to Add Money",
+        error.message || "Something went wrong.",
+      );
+    } finally {
+      setSaving(false);
     }
-  };
+  }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <FlatList
-        data={deposits}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.content}
-        ListHeaderComponent={
-          <View>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Text style={styles.backText}>‹ Back</Text>
-            </TouchableOpacity>
-            <Text accessibilityRole="header" style={styles.title}>Add Money</Text>
-            <Text style={styles.subtitle}>Create and manage wallet deposits</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
 
-            <View style={styles.formCard}>
-              <Text style={styles.formTitle}>{editingId ? 'Edit deposit' : 'New deposit'}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Source (e.g. Salary)"
-                value={form.source}
-                onChangeText={updateField('source')}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Amount"
-                keyboardType="decimal-pad"
-                value={form.amount}
-                onChangeText={updateField('amount')}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Note (optional)"
-                value={form.note}
-                onChangeText={updateField('note')}
-              />
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              <PrimaryButton
-                title={editingId ? 'UPDATE DEPOSIT' : 'ADD MONEY'}
-                backgroundColor={colors.accentBlue}
-                onPress={saveDeposit}
-              />
-              {editingId ? (
-                <TouchableOpacity onPress={() => { setForm(emptyForm); setEditingId(null); }} style={styles.cancelButton}>
-                  <Text style={styles.cancelText}>Cancel edit</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-            <Text style={styles.sectionTitle}>Saved deposits</Text>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={25} color={colors.text} />
+        </Pressable>
+
+        <Text style={styles.headerTitle}>Add Money</Text>
+        <View style={{ width: 25 }} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* BALANCE CARD */}
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceHeader}>
+            <Text style={styles.balanceLabel}>Available Balance</Text>
+
+            <Ionicons name="wallet-outline" size={24} color={colors.primary} />
           </View>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.depositCard}>
-            <View style={styles.depositInfo}>
-              <Text style={styles.depositSource}>{item.source}</Text>
-              <Text style={styles.depositNote}>{item.note || 'No note'}</Text>
-              <Text style={styles.depositAmount}>+₱{item.amount}</Text>
-            </View>
-            <View style={styles.actions}>
-              <TouchableOpacity onPress={() => editDeposit(item)} style={styles.actionButton}>
-                <Text style={styles.editText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => deleteDeposit(item.id)} style={styles.actionButton}>
-                <Text style={styles.deleteText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>No deposits yet.</Text>}
-      />
-      <BottomNav items={[
-        { key: 'home', label: 'Home', onPress: () => router.replace('/home') },
-        { key: 'transactions', label: 'Transactions', onPress: () => router.replace('/transactions') },
-        { key: 'logout', label: 'Log Out', onPress: () => router.replace('/') },
-      ]} />
-    </View>
+
+          <Text style={styles.balance}>
+            {loading || !wallet
+              ? "Loading..."
+              : formatPeso(wallet.balanceCents)}
+          </Text>
+
+          <Text style={styles.demoText}>Carry Demo Wallet</Text>
+        </View>
+
+        {/* MONEY SOURCE */}
+        <Text style={styles.label}>Money Source</Text>
+
+        <View style={styles.inputBox}>
+          <Ionicons name="business-outline" size={21} color={colors.primary} />
+
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Savings, Allowance, Bank"
+            placeholderTextColor={colors.muted}
+            value={source}
+            onChangeText={setSource}
+          />
+        </View>
+
+        {/* AMOUNT */}
+        <Text style={styles.label}>Enter Amount</Text>
+
+        <View style={styles.amountBox}>
+          <Text style={styles.peso}>₱</Text>
+
+          <TextInput
+            style={styles.amountInput}
+            placeholder="0.00"
+            placeholderTextColor={colors.muted}
+            keyboardType="decimal-pad"
+            value={amount}
+            onChangeText={setAmount}
+          />
+        </View>
+
+        {/* QUICK AMOUNTS */}
+        <View style={styles.quickAmounts}>
+          {quickAmounts.map((value) => (
+            <Pressable
+              key={value}
+              style={styles.amountChip}
+              onPress={() => setAmount(String(value))}
+            >
+              <Text style={styles.chipText}>
+                ₱{value.toLocaleString("en-PH")}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* NOTE */}
+        <Text style={styles.label}>Note (Optional)</Text>
+
+        <View style={styles.inputBox}>
+          <Ionicons name="create-outline" size={21} color={colors.primary} />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Add a note"
+            placeholderTextColor={colors.muted}
+            value={note}
+            onChangeText={setNote}
+          />
+        </View>
+
+        {/* SUBMIT BUTTON */}
+        <View style={styles.buttonContainer}>
+          <CarryButton
+            title={saving ? "Adding Money..." : "Add Money"}
+            onPress={handleAddMoney}
+            disabled={saving || loading || !wallet}
+          />
+        </View>
+
+        {/* DISCLAIMER */}
+        <Text style={styles.disclaimer}>
+          Demo mode only. No real money is added.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.screenBg },
-  content: { padding: 24, paddingBottom: 110 },
-  backButton: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 4, marginBottom: 8 },
-  backText: { color: colors.accentBlue, fontSize: 16, fontWeight: '600' },
-  title: { fontSize: 28, fontWeight: 'bold', color: colors.darkText },
-  subtitle: { color: colors.textMutedAlt, marginTop: 8, marginBottom: 20 },
-  formCard: { backgroundColor: colors.white, borderRadius: 16, padding: 16, ...shadow },
-  formTitle: { fontSize: 18, fontWeight: 'bold', color: colors.darkText, marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: colors.borderAlt, borderRadius: 10, padding: 12, marginBottom: 10, fontSize: 16, backgroundColor: colors.inputBgAlt },
-  error: { color: colors.danger, marginBottom: 10 },
-  cancelButton: { alignItems: 'center', padding: 12 },
-  cancelText: { color: colors.textMutedAlt },
-  sectionTitle: { fontSize: 19, fontWeight: 'bold', color: colors.darkText, marginTop: 24, marginBottom: 12 },
-  depositCard: { backgroundColor: colors.white, borderRadius: 14, padding: 16, marginBottom: 10, ...shadow },
-  depositInfo: { marginBottom: 10 },
-  depositSource: { fontSize: 16, fontWeight: 'bold', color: colors.darkText },
-  depositNote: { color: colors.textMutedAlt, marginTop: 4 },
-  depositAmount: { color: colors.success, fontWeight: 'bold', fontSize: 16, marginTop: 8 },
-  actions: { flexDirection: 'row', gap: 18 },
-  actionButton: { paddingVertical: 6 },
-  editText: { color: colors.accentBlue, fontWeight: '600' },
-  deleteText: { color: colors.danger, fontWeight: '600' },
-  empty: { textAlign: 'center', color: colors.textMutedAlt, marginTop: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingVertical: 18,
+  },
+
+  headerTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+
+  content: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+
+  balanceCard: {
+    backgroundColor: colors.card,
+    padding: 24,
+    borderRadius: 22,
+    marginTop: 15,
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  balanceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  balanceLabel: {
+    color: colors.muted,
+    fontSize: 14,
+  },
+
+  balance: {
+    color: colors.primary,
+    fontSize: 32,
+    fontWeight: "800",
+    marginTop: 18,
+  },
+
+  demoText: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 10,
+  },
+
+  label: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "600",
+    marginTop: 20,
+    marginBottom: 10,
+  },
+
+  inputBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 15,
+    paddingHorizontal: 16,
+    minHeight: 58,
+    gap: 12,
+  },
+
+  input: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
+    paddingVertical: 12,
+  },
+
+  amountBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 15,
+    paddingHorizontal: 18,
+    minHeight: 75,
+  },
+
+  peso: {
+    color: colors.primary,
+    fontSize: 30,
+    fontWeight: "700",
+  },
+
+  amountInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 30,
+    fontWeight: "700",
+    paddingLeft: 10,
+  },
+
+  quickAmounts: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 15,
+  },
+
+  amountChip: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+
+  chipText: {
+    color: colors.text,
+    fontWeight: "600",
+    fontSize: 12,
+  },
+
+  buttonContainer: {
+    marginTop: 35,
+  },
+
+  disclaimer: {
+    color: colors.muted,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 22,
+  },
 });

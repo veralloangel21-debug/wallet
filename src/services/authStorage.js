@@ -71,3 +71,99 @@ export async function getCurrentUser() {
 export async function logoutUser() {
   await AsyncStorage.removeItem(SESSION_KEY);
 }
+
+export async function findUserByUsername(input) {
+  const username = String(input || "")
+    .trim()
+    .replace(/^@/, "")
+    .toLowerCase();
+
+  if (!username) return null;
+
+  const users = await getUsers();
+
+  const user = users.find((item) => item.username.toLowerCase() === username);
+
+  if (!user) return null;
+
+  // Never return the stored password.
+  return {
+    id: user.id,
+    username: user.username,
+    firstname: user.firstname,
+    lastname: user.lastname,
+  };
+}
+
+export async function updateCurrentUserProfile(form) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error("Please log in first.");
+  }
+
+  const firstname = String(form.firstname || "").trim();
+  const lastname = String(form.lastname || "").trim();
+  const email = String(form.email || "")
+    .trim()
+    .toLowerCase();
+  const contactNumber = String(form.contactNumber || "").trim();
+
+  // VALIDATE ACCOUNT INFORMATION
+  if (!firstname || !lastname || !email || !contactNumber) {
+    throw new Error("Please complete all fields.");
+  }
+
+  if (firstname.length > 50 || lastname.length > 50) {
+    throw new Error("Names must not exceed 50 characters.");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  if (!/^09\d{9}$/.test(contactNumber)) {
+    throw new Error("Enter a valid 11-digit Philippine mobile number.");
+  }
+
+  // LOAD REGISTERED ACCOUNTS
+  const users = await getUsers();
+
+  const index = users.findIndex(
+    (user) => String(user.id) === String(currentUser.id),
+  );
+
+  if (index === -1) {
+    throw new Error("Registered account could not be found.");
+  }
+
+  // PREVENT DUPLICATE EMAILS
+  const emailExists = users.some(
+    (user, i) => i !== index && user.email.toLowerCase() === email,
+  );
+
+  if (emailExists) {
+    throw new Error("This email is already registered.");
+  }
+
+  // UPDATE ONLY ALLOWED FIELDS
+  const updatedUser = {
+    ...users[index],
+    firstname,
+    lastname,
+    email,
+    contactNumber,
+  };
+
+  users[index] = updatedUser;
+
+  // SAVE UPDATED REGISTERED ACCOUNT
+  await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+  // UPDATE THE LOGGED-IN SESSION
+  const { password, ...safeUser } = updatedUser;
+
+  await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(safeUser));
+
+  return safeUser;
+}

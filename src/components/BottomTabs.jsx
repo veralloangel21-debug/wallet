@@ -6,9 +6,7 @@ import { carryColors as colors } from "../constants/theme";
 const tabs = [
   { key: "home", label: "Home", icon: "home-outline" },
   { key: "history", label: "History", icon: "time-outline" },
-
   { key: "scan", label: "Scan QR", icon: "scan-outline" },
-
   { key: "profile", label: "Profile", icon: "person-outline" },
 ];
 

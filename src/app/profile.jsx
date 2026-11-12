@@ -70,6 +70,31 @@ export default function ProfileScreen() {
       return;
     }
 
+    if (section === "notifications") {
+      router.push("/notifications");
+      return;
+    }
+
+    if (section === "security") {
+      router.push("/security");
+      return;
+    }
+
+    if (section === "limits") {
+      router.push("/limits");
+      return;
+    }
+
+    if (section === "help") {
+      router.push("/help");
+      return;
+    }
+
+    if (section === "about") {
+      router.push("/about");
+      return;
+    }
+
     router.push({
       pathname: "/profile-details/[section]",
       params: { section },

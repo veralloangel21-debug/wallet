@@ -167,3 +167,59 @@ export async function updateCurrentUserProfile(form) {
 
   return safeUser;
 }
+
+export async function changeCurrentUserPassword(currentPassword, newPassword) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    throw new Error("Please log in first.");
+  }
+
+  if (!currentPassword || !newPassword) {
+    throw new Error("Please complete all password fields.");
+  }
+
+  if (newPassword.length < 8) {
+    throw new Error("Your new password must contain at least 8 characters.");
+  }
+
+  if (currentPassword === newPassword) {
+    throw new Error(
+      "Your new password must be different from your current password.",
+    );
+  }
+
+  // GET REGISTERED DEMO ACCOUNTS
+  const savedUsers = await AsyncStorage.getItem("wallet_registered_users");
+
+  const users = savedUsers ? JSON.parse(savedUsers) : [];
+
+  if (!Array.isArray(users)) {
+    throw new Error("Unable to read registered accounts.");
+  }
+
+  const userIndex = users.findIndex(
+    (user) =>
+      String(user.username).toLowerCase() ===
+      String(currentUser.username).toLowerCase(),
+  );
+
+  if (userIndex === -1) {
+    throw new Error("Account not found.");
+  }
+
+  // CHECK CURRENT PASSWORD
+  if (users[userIndex].password !== currentPassword) {
+    throw new Error("Your current password is incorrect.");
+  }
+
+  // UPDATE REGISTERED ACCOUNT
+  users[userIndex] = {
+    ...users[userIndex],
+    password: newPassword,
+  };
+
+  await AsyncStorage.setItem("wallet_registered_users", JSON.stringify(users));
+
+  return true;
+}

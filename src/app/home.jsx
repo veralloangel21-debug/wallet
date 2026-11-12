@@ -1,13 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -83,6 +76,7 @@ export default function HomeScreen() {
     return (wallet?.transactions ?? []).slice(0, 3).map((item) => ({
       id: item.id,
       title: item.title,
+
       date: new Date(item.createdAt).toLocaleString("en-PH"),
 
       amount: `${
@@ -95,11 +89,6 @@ export default function HomeScreen() {
       type: item.type,
     }));
   }, [wallet?.transactions]);
-
-  // TEMPORARY MESSAGE FOR UPCOMING FEATURES
-  function comingNext(feature) {
-    Alert.alert(feature, `${feature} will be added in a future step.`);
-  }
 
   // QUICK ACTIONS
   const quickActions = [
@@ -182,9 +171,12 @@ export default function HomeScreen() {
             </View>
           </Pressable>
 
+          {/* NOTIFICATIONS BUTTON */}
           <Pressable
-            onPress={() => comingNext("Notifications")}
+            onPress={() => router.push("/notifications")}
             style={styles.notificationButton}
+            accessibilityRole="button"
+            accessibilityLabel="Open Notifications"
           >
             <Ionicons
               name="notifications-outline"

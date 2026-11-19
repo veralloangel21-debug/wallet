@@ -18,6 +18,7 @@ import { carryColors as colors } from "../constants/theme";
 
 // SERVICES
 import { getCurrentUser } from "../services/authStorage";
+import { getReadNotifications } from "../services/notificationsStorage";
 
 // WALLET CONTEXT
 import { useWallet } from "../contexts/WalletContext";
@@ -31,12 +32,18 @@ export default function HomeScreen() {
   const [userName, setUserName] = useState("Carry User");
   const [walletId, setWalletId] = useState("");
 
+  // NOTIFICATION STATE
+  const [readIds, setReadIds] = useState([]);
+  const [notificationsReady, setNotificationsReady] = useState(false);
+
   const { wallet, refreshWallet } = useWallet();
 
   // LOAD DATA WHEN HOME OPENS
   useFocusEffect(
     useCallback(() => {
       let active = true;
+
+      setNotificationsReady(false);
 
       async function loadHomeData() {
         try {
@@ -52,12 +59,25 @@ export default function HomeScreen() {
             setUserName(fullName || user.username || "Carry User");
 
             setWalletId(user.username ? `@${user.username}` : "");
+
+            // LOAD WALLET AND READ NOTIFICATIONS
+            const userId = String(user.id || user.username);
+
+            const [savedReadIds] = await Promise.all([
+              getReadNotifications(userId),
+              refreshWallet(),
+            ]);
+
+            if (!active) return;
+
+            setReadIds(savedReadIds);
+            setNotificationsReady(true);
           } else {
             setUserName("Carry User");
             setWalletId("");
+            setReadIds([]);
+            await refreshWallet();
           }
-
-          await refreshWallet();
         } catch (error) {
           console.warn("Unable to load Home:", error);
         }
@@ -70,6 +90,17 @@ export default function HomeScreen() {
       };
     }, [refreshWallet]),
   );
+
+  // COUNT UNREAD NOTIFICATIONS
+  const unreadCount = useMemo(() => {
+    if (!notificationsReady) return 0;
+
+    const readSet = new Set(readIds);
+
+    return (wallet?.transactions ?? []).filter(
+      (item) => item && item.id != null && !readSet.has(String(item.id)),
+    ).length;
+  }, [wallet?.transactions, readIds, notificationsReady]);
 
   // RECENT SAVED TRANSACTIONS
   const recentTransactions = useMemo(() => {
@@ -171,22 +202,35 @@ export default function HomeScreen() {
             </View>
           </Pressable>
 
-          {/* NOTIFICATIONS BUTTON */}
+          {/* NOTIFICATION BELL WITH RED BADGE */}
           <Pressable
             onPress={() => router.push("/notifications")}
             style={styles.notificationButton}
             accessibilityRole="button"
-            accessibilityLabel="Open Notifications"
+            accessibilityLabel={
+              unreadCount > 0
+                ? `${unreadCount} unread notifications`
+                : "Open Notifications"
+            }
           >
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={colors.text}
-            />
+            <Ionicons name="notifications" size={32} color="#FFFFFF" />
+
+            {unreadCount > 0 && (
+              <View
+                style={[
+                  styles.notificationBadge,
+                  unreadCount > 9 && styles.notificationBadgeWide,
+                ]}
+              >
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </Pressable>
         </View>
 
-        {/* SHARED DEMO BALANCE */}
+        {/* WALLET BALANCE */}
         <WalletCard
           balance={wallet ? formatPeso(wallet.balanceCents) : "Loading..."}
           walletId={walletId}
@@ -274,7 +318,41 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // BELL BUTTON
   notificationButton: {
-    padding: 10,
+    width: 50,
+    height: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+
+  // RED NUMBER BADGE
+  notificationBadge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: "#F01825",
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+
+  notificationBadgeWide: {
+    minWidth: 30,
+    borderRadius: 15,
+  },
+
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
+    includeFontPadding: false,
   },
 });

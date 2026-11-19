@@ -1,15 +1,15 @@
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,11 +22,6 @@ export default function AuthScreen({ title, subtitle, children }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-
-      <LinearGradient
-        colors={["#10281E", colors.background, colors.background]}
-        style={StyleSheet.absoluteFillObject}
-      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -47,24 +42,16 @@ export default function AuthScreen({ title, subtitle, children }) {
 
           {/* CARRY LOGO */}
           <View style={styles.brand}>
-            <View style={styles.logo}>
-              <Ionicons
-                name="wallet-outline"
-                size={28}
-                color={colors.primary}
-              />
-            </View>
-
-            <Text style={styles.brandText}>
-              Carry
-              <Text style={styles.dot}>.</Text>
-            </Text>
+            <Image
+              source={require("../../assets/carry-logo.png")}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
 
           {/* SCREEN TITLE */}
           <View style={styles.headingContainer}>
             <Text style={styles.heading}>{title}</Text>
-
             <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
 
@@ -83,7 +70,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#030908",
   },
 
   content: {
@@ -104,33 +91,16 @@ const styles = StyleSheet.create({
 
   brand: {
     alignItems: "center",
-    marginTop: 22,
+    marginTop: 18,
   },
 
-  logo: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  brandText: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: colors.text,
-    marginTop: 10,
-  },
-
-  dot: {
-    color: colors.primary,
+  logoImage: {
+    width: 220,
+    height: 90,
   },
 
   headingContainer: {
-    marginTop: 34,
+    marginTop: 28,
     marginBottom: 30,
     alignItems: "center",
   },
@@ -148,6 +118,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
     marginTop: 10,
+    maxWidth: 300,
   },
 
   form: {

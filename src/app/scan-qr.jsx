@@ -1,217 +1,282 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { CameraView, useCameraPermissions } from "expo-camera";
-import { useRouter } from "expo-router";
+import { Camera, CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
+import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import CarryButton from "../components/CarryButton";
 import { carryColors as colors } from "../constants/theme";
-import { findUserByUsername, getCurrentUser } from "../services/authStorage";
-import { parseCarryQR } from "../utils/carryQR";
+
+// Carry QR format: carry:wallet:username
+function usernameFromCarryQR(rawData) {
+  const data = String(rawData || "").trim();
+  const prefix = "carry:wallet:";
+
+  if (!data.toLowerCase().startsWith(prefix)) {
+    return null;
+  }
+
+  const username = data.slice(prefix.length).trim();
+
+  return /^[a-zA-Z0-9._-]{1,40}$/.test(username) ? username : null;
+}
 
 export default function ScanQRScreen() {
   const router = useRouter();
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [manualId, setManualId] = useState("");
+  const [walletId, setWalletId] = useState("");
   const [scanned, setScanned] = useState(false);
+  const [picking, setPicking] = useState(false);
 
-  const scanningRef = useRef(false);
+  const scanLockedRef = useRef(false);
 
-  // VALIDATE RECIPIENT AND OPEN SEND MONEY
-  async function openRecipient(value, fromQR = false) {
-    if (scanningRef.current) return;
+  // RESET SCANNER WHEN RETURNING TO THE SCREEN
+  useFocusEffect(
+    useCallback(() => {
+      scanLockedRef.current = false;
+      setScanned(false);
 
-    scanningRef.current = true;
+      return () => {
+        scanLockedRef.current = true;
+      };
+    }, []),
+  );
+
+  // OPEN SEND MONEY WITH THE RECIPIENT
+  function continueToPayment(username) {
+    router.push({
+      pathname: "/send-money",
+      params: {
+        recipient: username,
+      },
+    });
+  }
+
+  function resetScanner() {
+    scanLockedRef.current = false;
+    setScanned(false);
+  }
+
+  // LIVE CAMERA QR SCANNER
+  function handleLiveScan({ data }) {
+    if (scanLockedRef.current || picking) return;
+
+    scanLockedRef.current = true;
     setScanned(true);
 
-    try {
-      const username = fromQR
-        ? parseCarryQR(value)
-        : String(value).trim().replace(/^@/, "");
+    const username = usernameFromCarryQR(data);
 
-      if (!username || !/^[a-zA-Z0-9_.-]{3,40}$/.test(username)) {
-        throw new Error(
-          fromQR
-            ? "This is not a supported Carry wallet QR code."
-            : "Enter a valid Carry username.",
-        );
-      }
-
-      const recipient = await findUserByUsername(username);
-      const currentUser = await getCurrentUser();
-
-      if (!currentUser) {
-        throw new Error("Please log in first.");
-      }
-
-      if (!recipient) {
-        throw new Error("This Carry account is not registered on this device.");
-      }
-
-      if (
-        String(recipient.id) === String(currentUser.id) ||
-        recipient.username.toLowerCase() === currentUser.username.toLowerCase()
-      ) {
-        throw new Error("You cannot send money to yourself.");
-      }
-
-      // SEND RECIPIENT TO EXISTING SEND MONEY SCREEN
-      router.replace({
-        pathname: "/send-money",
-        params: {
-          recipient: recipient.username,
+    if (!username) {
+      Alert.alert("Invalid Carry QR", "This is not a Carry wallet QR code.", [
+        {
+          text: "Scan Again",
+          onPress: resetScanner,
         },
+      ]);
+      return;
+    }
+
+    continueToPayment(username);
+  }
+
+  // UPLOAD QR FROM GALLERY
+  async function pickQRFromGallery() {
+    if (picking) return;
+
+    setPicking(true);
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
       });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      // READ QR DATA FROM THE SELECTED IMAGE
+      const imageUri = result.assets[0].uri;
+
+      const foundCodes = await Camera.scanFromURLAsync(imageUri, ["qr"]);
+
+      const username = foundCodes
+        .map((code) => usernameFromCarryQR(code.data))
+        .find(Boolean);
+
+      if (!username) {
+        Alert.alert(
+          "QR Not Found",
+          "No valid Carry wallet QR was detected. Try a clearer image and crop closely around the QR code.",
+        );
+        return;
+      }
+
+      // CONTINUE TO SEND MONEY
+      continueToPayment(username);
     } catch (error) {
+      console.warn("Gallery QR scan failed:", error);
+
       Alert.alert(
-        "Unable to Continue",
-        error.message || "Invalid wallet information.",
-        [
-          {
-            text: "Try Again",
-            onPress: () => {
-              scanningRef.current = false;
-              setScanned(false);
-            },
-          },
-        ],
+        "Unable to Read QR",
+        "Try another QR image or enter the Wallet ID manually.",
       );
+    } finally {
+      setPicking(false);
     }
   }
 
-  function handleScan(result) {
-    openRecipient(result.data, true);
-  }
+  // MANUAL WALLET ID
+  function handleManualContinue() {
+    const username = walletId.trim().replace(/^@/, "");
 
-  function handleManual() {
-    openRecipient(manualId, false);
+    if (!/^[a-zA-Z0-9._-]{1,40}$/.test(username)) {
+      Alert.alert(
+        "Invalid Wallet ID",
+        "Enter a valid Carry username, such as @verallo21.",
+      );
+      return;
+    }
+
+    continueToPayment(username);
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
 
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={25} color={colors.text} />
-        </Pressable>
-
-        <Text style={styles.title}>Scan to Pay</Text>
-
-        <View style={{ width: 25 }} />
-      </View>
-
       <ScrollView
-        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.content}
       >
-        {/* INTRO */}
-        <View style={styles.intro}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="scan-outline" size={32} color={colors.primary} />
-          </View>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} accessibilityLabel="Go back">
+            <Ionicons name="arrow-back" size={25} color={colors.text} />
+          </Pressable>
 
-          <Text style={styles.heading}>Scan a Carry QR Code</Text>
+          <Text style={styles.headerTitle}>Scan to Pay</Text>
 
-          <Text style={styles.subtitle}>
-            Scan another user's Carry QR code to prepare a demo payment.
-          </Text>
+          <View style={{ width: 25 }} />
         </View>
 
-        {/* CAMERA */}
-        <View style={styles.cameraContainer}>
-          {!permission ? (
-            <ActivityIndicator size="large" color={colors.primary} />
-          ) : !permission.granted ? (
-            <View style={styles.permissionBox}>
-              <Ionicons
-                name="camera-outline"
-                size={38}
-                color={colors.primary}
-              />
+        {/* TITLE - SMALL SCAN ICON REMOVED */}
+        <Text style={styles.title}>Scan a Carry QR Code</Text>
 
-              <Text style={styles.permissionText}>
-                Camera permission is needed to scan wallet QR codes.
-              </Text>
+        <Text style={styles.subtitle}>
+          Scan another user's Carry QR code or choose a saved QR image.
+        </Text>
 
-              <Pressable
-                onPress={requestPermission}
-                style={styles.permissionButton}
-              >
-                <Text style={styles.permissionButtonText}>Allow Camera</Text>
-              </Pressable>
-            </View>
-          ) : (
+        {/* CAMERA SCANNER */}
+        <View style={styles.cameraFrame}>
+          {permission?.granted && !picking ? (
             <CameraView
               style={StyleSheet.absoluteFillObject}
               facing="back"
               barcodeScannerSettings={{
                 barcodeTypes: ["qr"],
               }}
-              onBarcodeScanned={scanned ? undefined : handleScan}
+              onBarcodeScanned={scanned ? undefined : handleLiveScan}
+              onMountError={(event) => console.warn("Camera:", event.message)}
             />
+          ) : (
+            <View style={styles.cameraFallback}>
+              <Ionicons
+                name="camera-outline"
+                size={34}
+                color={colors.primary}
+              />
+
+              <Text style={styles.cameraText}>
+                {picking
+                  ? "Opening your gallery..."
+                  : "Allow camera access to scan QR codes live."}
+              </Text>
+
+              {!permission?.granted && !picking && (
+                <Pressable
+                  style={styles.permissionButton}
+                  onPress={requestPermission}
+                >
+                  <Text style={styles.permissionText}>Enable Camera</Text>
+                </Pressable>
+              )}
+            </View>
           )}
 
-          {/* SCANNER FRAME */}
-          {permission?.granted && (
-            <View pointerEvents="none" style={styles.scanFrame}>
-              <Ionicons name="scan-outline" size={170} color={colors.primary} />
+          {/* SCANNING FRAME */}
+          {permission?.granted && !picking && (
+            <View pointerEvents="none" style={styles.scanOverlay}>
+              <Ionicons name="scan-outline" size={140} color={colors.primary} />
             </View>
           )}
         </View>
 
-        <Text style={styles.scanHint}>
-          Position the QR code inside the frame.
+        <Text style={styles.hint}>Position the QR code inside the frame.</Text>
+
+        {/* NEW: UPLOAD QR FROM GALLERY */}
+        <Pressable
+          style={[styles.galleryButton, picking && styles.disabled]}
+          onPress={pickQRFromGallery}
+          disabled={picking}
+        >
+          {picking ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Ionicons name="images-outline" size={21} color={colors.primary} />
+          )}
+
+          <Text style={styles.galleryText}>
+            {picking ? "Reading QR Image..." : "Upload QR from Gallery"}
+          </Text>
+        </Pressable>
+
+        {/* MANUAL WALLET ID */}
+        <Text style={styles.manualTitle}>Or enter a Wallet ID</Text>
+
+        <Text style={styles.manualSubtitle}>
+          Useful when testing with your Android emulator.
         </Text>
 
-        {/* MANUAL ENTRY */}
-        <View style={styles.manualSection}>
-          <Text style={styles.sectionTitle}>Or enter a Wallet ID</Text>
+        <View style={styles.inputRow}>
+          <Ionicons name="at-outline" size={21} color={colors.primary} />
 
-          <Text style={styles.helper}>
-            Useful when testing with your Android emulator.
-          </Text>
-
-          <View style={styles.inputBox}>
-            <Ionicons name="at-outline" size={22} color={colors.primary} />
-
-            <TextInput
-              style={styles.input}
-              placeholder="@username"
-              placeholderTextColor={colors.muted}
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={manualId}
-              onChangeText={setManualId}
-            />
-          </View>
-
-          <View style={styles.buttonArea}>
-            <CarryButton
-              title="Continue to Payment"
-              onPress={handleManual}
-              disabled={scanned}
-              showArrow
-            />
-          </View>
+          <TextInput
+            value={walletId}
+            onChangeText={setWalletId}
+            style={styles.input}
+            placeholder="@username"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
         </View>
 
+        {/* CONTINUE BUTTON */}
+        <Pressable style={styles.continueButton} onPress={handleManualContinue}>
+          <Text style={styles.continueText}>Continue to Payment</Text>
+
+          <Ionicons name="arrow-forward" size={20} color={colors.background} />
+        </Pressable>
+
         <Text style={styles.disclaimer}>
-          Carry Demo Mode — This scanner does not process real payments.
+          Carry QR payments are demo transfers. No real money is sent.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -224,148 +289,171 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 20,
-  },
-
-  title: {
-    color: colors.text,
-    fontSize: 19,
-    fontWeight: "700",
-  },
-
   content: {
-    paddingHorizontal: 22,
-    paddingBottom: 40,
+    flexGrow: 1,
+    paddingHorizontal: 18,
+    paddingBottom: 28,
     width: "100%",
     maxWidth: 480,
     alignSelf: "center",
   },
 
-  intro: {
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 15,
-    marginBottom: 25,
+    paddingVertical: 18,
+    paddingHorizontal: 4,
   },
 
-  iconCircle: {
-    width: 65,
-    height: 65,
-    borderRadius: 33,
-    backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  heading: {
+  headerTitle: {
     color: colors.text,
-    fontSize: 22,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  title: {
+    color: colors.text,
+    fontSize: 21,
     fontWeight: "800",
-    marginTop: 17,
+    textAlign: "center",
+    marginTop: 24,
   },
 
   subtitle: {
     color: colors.muted,
+    fontSize: 12,
+    lineHeight: 20,
     textAlign: "center",
-    fontSize: 13,
-    lineHeight: 21,
     marginTop: 10,
+    marginBottom: 20,
   },
 
-  cameraContainer: {
-    height: 285,
-    borderRadius: 22,
+  cameraFrame: {
+    height: 260,
     backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 19,
     overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  cameraFallback: {
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: 28,
+    gap: 12,
   },
 
-  scanFrame: {
-    position: "absolute",
-    alignSelf: "center",
-  },
-
-  permissionBox: {
-    padding: 20,
-    alignItems: "center",
-    gap: 15,
-  },
-
-  permissionText: {
+  cameraText: {
     color: colors.muted,
     textAlign: "center",
-    lineHeight: 21,
+    fontSize: 12,
   },
 
   permissionButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.card,
   },
 
-  permissionButtonText: {
-    color: colors.background,
+  permissionText: {
+    color: colors.primary,
     fontWeight: "700",
   },
 
-  scanHint: {
+  scanOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  hint: {
     color: colors.muted,
     textAlign: "center",
-    fontSize: 12,
-    marginTop: 15,
+    fontSize: 11,
+    marginTop: 11,
+    marginBottom: 16,
   },
 
-  manualSection: {
-    marginTop: 30,
+  galleryButton: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 15,
+    paddingVertical: 15,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
   },
 
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 17,
+  galleryText: {
+    color: colors.primary,
+    fontSize: 14,
     fontWeight: "700",
   },
 
-  helper: {
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 7,
-    marginBottom: 18,
+  disabled: {
+    opacity: 0.6,
   },
 
-  inputBox: {
-    minHeight: 58,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+  manualTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "700",
+    marginTop: 29,
+  },
+
+  manualSubtitle: {
+    color: colors.muted,
+    fontSize: 11,
+    marginTop: 8,
+    marginBottom: 15,
+  },
+
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 15,
     gap: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 13,
+    paddingHorizontal: 15,
+    minHeight: 55,
   },
 
   input: {
     flex: 1,
+    fontSize: 14,
     color: colors.text,
-    fontSize: 15,
   },
 
-  buttonArea: {
-    marginTop: 18,
+  continueButton: {
+    minHeight: 54,
+    borderRadius: 13,
+    marginTop: 16,
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+
+  continueText: {
+    color: colors.background,
+    fontWeight: "800",
+    fontSize: 14,
   },
 
   disclaimer: {
-    color: colors.muted,
-    fontSize: 11,
+    marginTop: 17,
     textAlign: "center",
-    lineHeight: 19,
-    marginTop: 28,
+    fontSize: 11,
+    lineHeight: 18,
+    color: colors.muted,
   },
 });

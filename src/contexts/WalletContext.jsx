@@ -1,18 +1,25 @@
 import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 
 import { findUserByUsername, getCurrentUser } from "../services/authStorage";
 
 import { loadWallet, saveWallet } from "../services/walletStorage";
 
+import { formatPeso } from "../utils/currency";
+
 const WalletContext = createContext(null);
 
+// DEMO TRANSFER LIMITS (IN CENTAVOS)
+const DAILY_LIMIT_CENTS = 1000000; // ₱10,000
+const MONTHLY_LIMIT_CENTS = 5000000; // ₱50,000
+
+// VALIDATE THE AMOUNT
 function parseAmount(amount) {
   const input = String(amount).trim();
 
@@ -33,6 +40,47 @@ function parseAmount(amount) {
   return cents;
 }
 
+// CALCULATE DAILY AND MONTHLY OUTGOING TRANSACTIONS
+function getOutgoingUsage(transactions, now) {
+  let dailyUsed = 0;
+  let monthlyUsed = 0;
+
+  for (const item of transactions ?? []) {
+    if (item.type !== "expense") continue;
+
+    const amount = Number(item.amountCents);
+    const date = new Date(item.createdAt);
+
+    if (
+      !Number.isSafeInteger(amount) ||
+      amount <= 0 ||
+      Number.isNaN(date.getTime()) ||
+      date > now
+    ) {
+      continue;
+    }
+
+    const sameMonth =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth();
+
+    if (sameMonth) {
+      monthlyUsed += amount;
+
+      const sameDay = date.getDate() === now.getDate();
+
+      if (sameDay) {
+        dailyUsed += amount;
+      }
+    }
+  }
+
+  return {
+    dailyUsed,
+    monthlyUsed,
+  };
+}
+
 export function WalletProvider({ children }) {
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +89,7 @@ export function WalletProvider({ children }) {
   const walletRef = useRef(null);
   const savingRef = useRef(false);
 
-  // LOAD WALLET FOR THE LOGGED-IN USER
+  // LOAD THE CURRENT USER'S WALLET
   const refreshWallet = useCallback(async () => {
     setLoading(true);
 
@@ -51,15 +99,18 @@ export function WalletProvider({ children }) {
       if (!user) {
         userIdRef.current = null;
         walletRef.current = null;
+
         setWallet(null);
         return;
       }
 
       const userId = String(user.id || user.username);
+
       const savedWallet = await loadWallet(userId);
 
       userIdRef.current = userId;
       walletRef.current = savedWallet;
+
       setWallet(savedWallet);
     } finally {
       setLoading(false);
@@ -101,6 +152,7 @@ export function WalletProvider({ children }) {
 
       const updated = {
         balanceCents: current.balanceCents + cents,
+
         transactions: [
           {
             id: `topup-${Date.now()}`,
@@ -120,6 +172,7 @@ export function WalletProvider({ children }) {
 
       userIdRef.current = userId;
       walletRef.current = updated;
+
       setWallet(updated);
 
       return updated;
@@ -148,12 +201,14 @@ export function WalletProvider({ children }) {
       savingRef.current = true;
 
       try {
+        // GET THE SENDER
         const sender = await getCurrentUser();
 
         if (!sender) {
           throw new Error("Please log in first.");
         }
 
+        // FIND THE RECEIVER
         const recipient = await findUserByUsername(recipientName);
 
         if (!recipient) {
@@ -161,34 +216,74 @@ export function WalletProvider({ children }) {
         }
 
         const senderId = String(sender.id || sender.username);
+
         const recipientId = String(recipient.id || recipient.username);
 
+        // PREVENT SELF TRANSFERS
         if (
           senderId === recipientId ||
-          sender.username.toLowerCase() === recipient.username.toLowerCase()
+          String(sender.username).toLowerCase() ===
+            String(recipient.username).toLowerCase()
         ) {
           throw new Error("You cannot send money to yourself.");
         }
 
+        // LOAD SENDER WALLET
         const senderWallet =
           userIdRef.current === senderId && walletRef.current
             ? walletRef.current
             : await loadWallet(senderId);
 
-        const recipientWallet = await loadWallet(recipientId);
-
+        // CHECK AVAILABLE BALANCE
         if (senderWallet.balanceCents < cents) {
           throw new Error("Insufficient demo wallet balance.");
         }
 
+        // CHECK DAILY AND MONTHLY LIMITS
+        const now = new Date();
+
+        const { dailyUsed, monthlyUsed } = getOutgoingUsage(
+          senderWallet.transactions,
+          now,
+        );
+
+        // DAILY LIMIT VALIDATION
+        if (dailyUsed + cents > DAILY_LIMIT_CENTS) {
+          const remaining = Math.max(0, DAILY_LIMIT_CENTS - dailyUsed);
+
+          throw new Error(
+            `Daily transfer limit exceeded. ` +
+              `You can send up to ` +
+              `${formatPeso(remaining)} more today.`,
+          );
+        }
+
+        // MONTHLY LIMIT VALIDATION
+        if (monthlyUsed + cents > MONTHLY_LIMIT_CENTS) {
+          const remaining = Math.max(0, MONTHLY_LIMIT_CENTS - monthlyUsed);
+
+          throw new Error(
+            `Monthly transfer limit exceeded. ` +
+              `You can send up to ` +
+              `${formatPeso(remaining)} more this month.`,
+          );
+        }
+
+        // LOAD RECEIVER WALLET
+        const recipientWallet = await loadWallet(recipientId);
+
+        // CREATE TRANSFER DETAILS
         const transferId =
           `transfer-${Date.now()}-` + Math.random().toString(36).slice(2, 8);
 
-        const createdAt = new Date().toISOString();
+        const createdAt = now.toISOString();
+
         const transferNote = String(note || "").trim();
 
+        // UPDATE SENDER WALLET
         const updatedSender = {
           balanceCents: senderWallet.balanceCents - cents,
+
           transactions: [
             {
               id: transferId,
@@ -204,8 +299,10 @@ export function WalletProvider({ children }) {
           ],
         };
 
+        // UPDATE RECEIVER WALLET
         const updatedRecipient = {
           balanceCents: recipientWallet.balanceCents + cents,
+
           transactions: [
             {
               id: transferId,
@@ -221,31 +318,36 @@ export function WalletProvider({ children }) {
           ],
         };
 
-        // Save sender first, then recipient.
+        // SAVE SENDER WALLET FIRST
         await saveWallet(senderId, updatedSender);
 
+        // SAVE RECEIVER WALLET
         try {
           await saveWallet(recipientId, updatedRecipient);
         } catch (error) {
-          // Best-effort rollback for this local demo.
+          // TRY TO RESTORE SENDER'S BALANCE
           try {
             await saveWallet(senderId, senderWallet);
           } catch (rollbackError) {
             throw new Error(
-              "Demo storage is inconsistent. Do not retry " +
-                "until the account balances are checked.",
+              "Demo storage is inconsistent. " +
+                "Do not retry until the account " +
+                "balances are checked.",
             );
           }
 
           throw new Error(
-            "Transfer could not be saved. Demo balance restored.",
+            "Transfer could not be saved. " + "Demo balance restored.",
           );
         }
 
+        // UPDATE CURRENT WALLET STATE
         userIdRef.current = senderId;
         walletRef.current = updatedSender;
+
         setWallet(updatedSender);
 
+        // RETURN TRANSFER INFORMATION
         return {
           ...updatedSender,
           transferId,

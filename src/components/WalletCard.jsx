@@ -79,12 +79,10 @@ export default function WalletCard({ balance, walletId }) {
       {/* WALLET INFORMATION */}
       <View style={styles.bottomRow}>
         <View>
-          <Text style={styles.walletLabel}>Carry Demo Wallet</Text>
+          <Text style={styles.walletLabel}></Text>
 
           <Text style={styles.walletId}>{walletId}</Text>
         </View>
-
-        <Ionicons name="wallet-outline" size={30} color={colors.primary} />
       </View>
     </LinearGradient>
   );
@@ -126,12 +124,12 @@ const styles = StyleSheet.create({
 
   walletLabel: {
     color: "#D7F7E9",
-    fontSize: 12,
+    fontSize: 16,
   },
 
   walletId: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     marginTop: 5,
   },

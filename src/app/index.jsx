@@ -1,79 +1,72 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import CarryButton from "../components/CarryButton";
-import WalletArtwork from "../components/WalletArtwork";
 import { carryColors as colors } from "../constants/theme";
 
 export default function WelcomeScreen() {
   const router = useRouter();
 
-  const goToRegister = () => {
-    router.push("/register");
-  };
-
-  const goToLogin = () => {
-    router.push("/login");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
 
-      <LinearGradient
-        colors={["#0D251B", colors.background, colors.background]}
-        style={StyleSheet.absoluteFillObject}
-      />
-
       <ScrollView
+        style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.content}
       >
-        {/* CARRY BRAND */}
-        <View style={styles.brandContainer}>
-          <View style={styles.logoIcon}>
-            <Ionicons name="wallet-outline" size={26} color={colors.primary} />
-          </View>
-
-          <Text style={styles.brandName}>
-            Carry<Text style={styles.brandDot}>.</Text>
-          </Text>
-        </View>
-
-        {/* WALLET DESIGN */}
-        <View style={styles.artworkContainer}>
-          <WalletArtwork />
-        </View>
-
-        {/* WELCOME CONTENT */}
-        <View style={styles.introContainer}>
-          <Text style={styles.heading}>
-            Your wallet,{"\n"}
-            <Text style={styles.highlight}>everywhere.</Text>
-          </Text>
-
-          <Text style={styles.description}>
-            Send, pay, receive, and manage your money. All in one convenient
-            place.
-          </Text>
-        </View>
-
-        {/* ACTION BUTTONS */}
-        <View style={styles.actions}>
-          <CarryButton title="Get Started" showArrow onPress={goToRegister} />
-
-          <CarryButton
-            title="I already have an account"
-            variant="outline"
-            onPress={goToLogin}
+        {/* MAIN WELCOME CONTENT */}
+        <View style={styles.hero}>
+          {/* CARRY LOGO */}
+          <Image
+            source={require("../../assets/carry-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
           />
 
-          <Text style={styles.footer}>Secure • Simple • Everywhere</Text>
+          {/* HEADLINE */}
+          <Text style={styles.heading}>Your Everyday{"\n"}E-Wallet</Text>
+
+          {/* DESCRIPTION */}
+          <Text style={styles.description}>
+            Send, receive, and manage your money
+            {"\n"}with ease — all in one place.
+          </Text>
+        </View>
+
+        {/* BOTTOM BUTTONS */}
+        <View style={styles.actions}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => router.push("/register")}
+            accessibilityRole="button"
+          >
+            <Text style={styles.primaryText}>Create an Account</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.outlineButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={() => router.push("/login")}
+            accessibilityRole="button"
+          >
+            <Text style={styles.outlineText}>Log In</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -83,90 +76,96 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#030908",
   },
 
-  scrollContent: {
+  scroll: {
+    flex: 1,
+  },
+
+  content: {
     flexGrow: 1,
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 26,
-    paddingTop: 28,
-    paddingBottom: 28,
+    paddingHorizontal: 28,
+    paddingTop: 35,
+    paddingBottom: 36,
     width: "100%",
     maxWidth: 480,
     alignSelf: "center",
   },
 
-  brandContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-
-  logoIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
-    backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  brandName: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: colors.text,
-    letterSpacing: -1,
-  },
-
-  brandDot: {
-    color: colors.primary,
-  },
-
-  artworkContainer: {
+  hero: {
+    flex: 1,
+    minHeight: 380,
     width: "100%",
+    justifyContent: "center",
     alignItems: "center",
-    marginVertical: 18,
   },
 
-  introContainer: {
-    alignItems: "center",
-    marginBottom: 26,
+  logo: {
+    width: "100%",
+    maxWidth: 310,
+    height: 135,
   },
 
   heading: {
-    fontSize: 36,
-    lineHeight: 44,
+    color: "#FFFFFF",
+    fontSize: 35,
     fontWeight: "800",
+    lineHeight: 43,
+    letterSpacing: -0.8,
     textAlign: "center",
-    color: colors.text,
-    letterSpacing: -1,
-  },
-
-  highlight: {
-    color: colors.primary,
+    marginTop: 42,
   },
 
   description: {
+    color: "#A0B4AC",
     fontSize: 15,
-    lineHeight: 24,
-    color: colors.muted,
+    lineHeight: 25,
     textAlign: "center",
-    marginTop: 16,
-    maxWidth: 330,
+    marginTop: 20,
   },
 
   actions: {
     width: "100%",
-    gap: 14,
+    gap: 16,
+    marginTop: 28,
   },
 
-  footer: {
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: 16,
+  primaryButton: {
+    width: "100%",
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  primaryText: {
+    color: "#030908",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  outlineButton: {
+    width: "100%",
+    height: 58,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  outlineText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  pressed: {
+    opacity: 0.75,
   },
 });

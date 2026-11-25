@@ -19,7 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { carryColors as colors } from "../constants/theme";
 
-// Carry QR format: carry:wallet:username
+// CHECK CARRY QR CODE
 function usernameFromCarryQR(rawData) {
   const data = String(rawData || "").trim();
   const prefix = "carry:wallet:";
@@ -37,6 +37,7 @@ export default function ScanQRScreen() {
   const router = useRouter();
 
   const [permission, requestPermission] = useCameraPermissions();
+
   const [walletId, setWalletId] = useState("");
   const [scanned, setScanned] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -44,7 +45,7 @@ export default function ScanQRScreen() {
 
   const scanLockedRef = useRef(false);
 
-  // CAMERA ACTIVE ONLY WHILE THIS SCREEN IS OPEN
+  // CAMERA ACTIVE ONLY WHILE SCREEN IS OPEN
   useFocusEffect(
     useCallback(() => {
       scanLockedRef.current = false;
@@ -68,15 +69,17 @@ export default function ScanQRScreen() {
     });
   }
 
-  // RESET QR SCAN AFTER INVALID CODE
+  // RESET SCANNER AFTER INVALID QR
   function resetScanner() {
     scanLockedRef.current = false;
     setScanned(false);
   }
 
-  // HANDLE LIVE QR SCANNING
+  // HANDLE LIVE QR SCAN
   function handleLiveScan({ data }) {
-    if (scanLockedRef.current || picking) return;
+    if (scanLockedRef.current || picking) {
+      return;
+    }
 
     scanLockedRef.current = true;
     setScanned(true);
@@ -101,7 +104,7 @@ export default function ScanQRScreen() {
     continueToPayment(username);
   }
 
-  // UPLOAD QR IMAGE FROM GALLERY
+  // UPLOAD QR FROM GALLERY
   async function pickQRFromGallery() {
     if (picking) return;
 
@@ -121,7 +124,7 @@ export default function ScanQRScreen() {
 
       const imageUri = result.assets[0].uri;
 
-      // READ QR FROM IMAGE
+      // READ QR CODE FROM IMAGE
       const foundCodes = await Camera.scanFromURLAsync(imageUri, ["qr"]);
 
       const username = foundCodes
@@ -185,7 +188,7 @@ export default function ScanQRScreen() {
           <View style={{ width: 25 }} />
         </View>
 
-        {/* SCREEN TITLE */}
+        {/* TITLE */}
         <Text style={styles.title}>Scan a Carry QR Code</Text>
 
         <Text style={styles.subtitle}>
@@ -194,7 +197,6 @@ export default function ScanQRScreen() {
 
         {/* CAMERA FRAME */}
         <View style={styles.cameraFrame} collapsable={false}>
-          {/* LIVE CAMERA PREVIEW */}
           {showCamera ? (
             <CameraView
               style={styles.cameraPreview}
@@ -232,25 +234,7 @@ export default function ScanQRScreen() {
               )}
             </View>
           )}
-
-          {/* GREEN SCANNING CORNERS */}
-          {showCamera && (
-            <View pointerEvents="none" style={styles.scanOverlay}>
-              <View style={styles.scanBox}>
-                <View style={[styles.corner, styles.topLeft]} />
-
-                <View style={[styles.corner, styles.topRight]} />
-
-                <View style={[styles.corner, styles.bottomLeft]} />
-
-                <View style={[styles.corner, styles.bottomRight]} />
-              </View>
-            </View>
-          )}
         </View>
-
-        {/* CAMERA INSTRUCTIONS */}
-        <Text style={styles.hint}>Position the QR code inside the frame.</Text>
 
         {/* UPLOAD QR FROM GALLERY */}
         <Pressable
@@ -306,6 +290,7 @@ export default function ScanQRScreen() {
   );
 }
 
+// STYLES
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -356,16 +341,16 @@ const styles = StyleSheet.create({
 
   // CAMERA CONTAINER
   cameraFrame: {
-    height: 260,
     width: "100%",
-    position: "relative",
+    height: 260,
     backgroundColor: "#000000",
+    position: "relative",
   },
 
-  // LIVE CAMERA
+  // CAMERA PREVIEW
   cameraPreview: {
-    flex: 1,
     width: "100%",
+    height: "100%",
   },
 
   // CAMERA FALLBACK
@@ -395,69 +380,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // SCANNER OVERLAY
-  scanOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
-
-  // CENTER SCAN BOX
-  scanBox: {
-    width: 150,
-    height: 150,
-    position: "relative",
-  },
-
-  corner: {
-    position: "absolute",
-    width: 34,
-    height: 34,
-    borderColor: colors.primary,
-  },
-
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 6,
-    borderLeftWidth: 6,
-    borderTopLeftRadius: 12,
-  },
-
-  topRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 6,
-    borderRightWidth: 6,
-    borderTopRightRadius: 12,
-  },
-
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 6,
-    borderLeftWidth: 6,
-    borderBottomLeftRadius: 12,
-  },
-
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 6,
-    borderRightWidth: 6,
-    borderBottomRightRadius: 12,
-  },
-
-  // CAMERA INSTRUCTION
-  hint: {
-    color: colors.muted,
-    textAlign: "center",
-    fontSize: 11,
-    marginTop: 11,
-    marginBottom: 16,
-  },
-
   // GALLERY BUTTON
   galleryButton: {
     borderWidth: 1,
@@ -468,6 +390,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
+    marginTop: 18,
   },
 
   galleryText: {

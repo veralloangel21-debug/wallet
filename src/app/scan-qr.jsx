@@ -40,22 +40,25 @@ export default function ScanQRScreen() {
   const [walletId, setWalletId] = useState("");
   const [scanned, setScanned] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
 
   const scanLockedRef = useRef(false);
 
-  // RESET SCANNER WHEN RETURNING TO THE SCREEN
+  // CAMERA ACTIVE ONLY WHILE THIS SCREEN IS OPEN
   useFocusEffect(
     useCallback(() => {
       scanLockedRef.current = false;
       setScanned(false);
+      setCameraActive(true);
 
       return () => {
         scanLockedRef.current = true;
+        setCameraActive(false);
       };
     }, []),
   );
 
-  // OPEN SEND MONEY WITH THE RECIPIENT
+  // OPEN SEND MONEY SCREEN
   function continueToPayment(username) {
     router.push({
       pathname: "/send-money",
@@ -65,12 +68,13 @@ export default function ScanQRScreen() {
     });
   }
 
+  // RESET QR SCAN AFTER INVALID CODE
   function resetScanner() {
     scanLockedRef.current = false;
     setScanned(false);
   }
 
-  // LIVE CAMERA QR SCANNER
+  // HANDLE LIVE QR SCANNING
   function handleLiveScan({ data }) {
     if (scanLockedRef.current || picking) return;
 
@@ -80,19 +84,24 @@ export default function ScanQRScreen() {
     const username = usernameFromCarryQR(data);
 
     if (!username) {
-      Alert.alert("Invalid Carry QR", "This is not a Carry wallet QR code.", [
-        {
-          text: "Scan Again",
-          onPress: resetScanner,
-        },
-      ]);
+      Alert.alert(
+        "Invalid Carry QR",
+        "This is not a valid Carry wallet QR code.",
+        [
+          {
+            text: "Scan Again",
+            onPress: resetScanner,
+          },
+        ],
+      );
+
       return;
     }
 
     continueToPayment(username);
   }
 
-  // UPLOAD QR FROM GALLERY
+  // UPLOAD QR IMAGE FROM GALLERY
   async function pickQRFromGallery() {
     if (picking) return;
 
@@ -110,9 +119,9 @@ export default function ScanQRScreen() {
         return;
       }
 
-      // READ QR DATA FROM THE SELECTED IMAGE
       const imageUri = result.assets[0].uri;
 
+      // READ QR FROM IMAGE
       const foundCodes = await Camera.scanFromURLAsync(imageUri, ["qr"]);
 
       const username = foundCodes
@@ -124,10 +133,10 @@ export default function ScanQRScreen() {
           "QR Not Found",
           "No valid Carry wallet QR was detected. Try a clearer image and crop closely around the QR code.",
         );
+
         return;
       }
 
-      // CONTINUE TO SEND MONEY
       continueToPayment(username);
     } catch (error) {
       console.warn("Gallery QR scan failed:", error);
@@ -146,15 +155,15 @@ export default function ScanQRScreen() {
     const username = walletId.trim().replace(/^@/, "");
 
     if (!/^[a-zA-Z0-9._-]{1,40}$/.test(username)) {
-      Alert.alert(
-        "Invalid Wallet ID",
-        "Enter a valid Carry username, such as @verallo21.",
-      );
+      Alert.alert("Invalid Wallet ID", "Enter a valid Carry username.");
+
       return;
     }
 
     continueToPayment(username);
   }
+
+  const showCamera = permission?.granted && cameraActive && !picking;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -176,24 +185,27 @@ export default function ScanQRScreen() {
           <View style={{ width: 25 }} />
         </View>
 
-        {/* TITLE - SMALL SCAN ICON REMOVED */}
+        {/* SCREEN TITLE */}
         <Text style={styles.title}>Scan a Carry QR Code</Text>
 
         <Text style={styles.subtitle}>
           Scan another user's Carry QR code or choose a saved QR image.
         </Text>
 
-        {/* CAMERA SCANNER */}
-        <View style={styles.cameraFrame}>
-          {permission?.granted && !picking ? (
+        {/* CAMERA FRAME */}
+        <View style={styles.cameraFrame} collapsable={false}>
+          {/* LIVE CAMERA PREVIEW */}
+          {showCamera ? (
             <CameraView
-              style={StyleSheet.absoluteFillObject}
+              style={styles.cameraPreview}
               facing="back"
               barcodeScannerSettings={{
                 barcodeTypes: ["qr"],
               }}
               onBarcodeScanned={scanned ? undefined : handleLiveScan}
-              onMountError={(event) => console.warn("Camera:", event.message)}
+              onMountError={(event) => {
+                console.warn("Camera:", event?.message);
+              }}
             />
           ) : (
             <View style={styles.cameraFallback}>
@@ -209,6 +221,7 @@ export default function ScanQRScreen() {
                   : "Allow camera access to scan QR codes live."}
               </Text>
 
+              {/* CAMERA PERMISSION */}
               {!permission?.granted && !picking && (
                 <Pressable
                   style={styles.permissionButton}
@@ -220,17 +233,26 @@ export default function ScanQRScreen() {
             </View>
           )}
 
-          {/* SCANNING FRAME */}
-          {permission?.granted && !picking && (
+          {/* GREEN SCANNING CORNERS */}
+          {showCamera && (
             <View pointerEvents="none" style={styles.scanOverlay}>
-              <Ionicons name="scan-outline" size={140} color={colors.primary} />
+              <View style={styles.scanBox}>
+                <View style={[styles.corner, styles.topLeft]} />
+
+                <View style={[styles.corner, styles.topRight]} />
+
+                <View style={[styles.corner, styles.bottomLeft]} />
+
+                <View style={[styles.corner, styles.bottomRight]} />
+              </View>
             </View>
           )}
         </View>
 
+        {/* CAMERA INSTRUCTIONS */}
         <Text style={styles.hint}>Position the QR code inside the frame.</Text>
 
-        {/* NEW: UPLOAD QR FROM GALLERY */}
+        {/* UPLOAD QR FROM GALLERY */}
         <Pressable
           style={[styles.galleryButton, picking && styles.disabled]}
           onPress={pickQRFromGallery}
@@ -251,7 +273,7 @@ export default function ScanQRScreen() {
         <Text style={styles.manualTitle}>Or enter a Wallet ID</Text>
 
         <Text style={styles.manualSubtitle}>
-          Useful when testing with your Android emulator.
+          Enter another Carry user's username.
         </Text>
 
         <View style={styles.inputRow}>
@@ -268,13 +290,14 @@ export default function ScanQRScreen() {
           />
         </View>
 
-        {/* CONTINUE BUTTON */}
+        {/* CONTINUE TO PAYMENT */}
         <Pressable style={styles.continueButton} onPress={handleManualContinue}>
           <Text style={styles.continueText}>Continue to Payment</Text>
 
           <Ionicons name="arrow-forward" size={20} color={colors.background} />
         </Pressable>
 
+        {/* DISCLAIMER */}
         <Text style={styles.disclaimer}>
           Carry QR payments are demo transfers. No real money is sent.
         </Text>
@@ -298,6 +321,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
 
+  // HEADER
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -312,6 +336,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // TITLE
   title: {
     color: colors.text,
     fontSize: 21,
@@ -329,18 +354,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  // CAMERA CONTAINER
   cameraFrame: {
     height: 260,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 19,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
+    width: "100%",
+    position: "relative",
+    backgroundColor: "#000000",
   },
 
+  // LIVE CAMERA
+  cameraPreview: {
+    flex: 1,
+    width: "100%",
+  },
+
+  // CAMERA FALLBACK
   cameraFallback: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 28,
@@ -365,12 +395,61 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // SCANNER OVERLAY
   scanOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 1,
   },
 
+  // CENTER SCAN BOX
+  scanBox: {
+    width: 150,
+    height: 150,
+    position: "relative",
+  },
+
+  corner: {
+    position: "absolute",
+    width: 34,
+    height: 34,
+    borderColor: colors.primary,
+  },
+
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 6,
+    borderLeftWidth: 6,
+    borderTopLeftRadius: 12,
+  },
+
+  topRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 6,
+    borderRightWidth: 6,
+    borderTopRightRadius: 12,
+  },
+
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 6,
+    borderLeftWidth: 6,
+    borderBottomLeftRadius: 12,
+  },
+
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 6,
+    borderRightWidth: 6,
+    borderBottomRightRadius: 12,
+  },
+
+  // CAMERA INSTRUCTION
   hint: {
     color: colors.muted,
     textAlign: "center",
@@ -379,6 +458,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
+  // GALLERY BUTTON
   galleryButton: {
     borderWidth: 1,
     borderColor: colors.primary,
@@ -400,6 +480,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
+  // MANUAL WALLET ID
   manualTitle: {
     color: colors.text,
     fontSize: 15,
@@ -432,6 +513,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
+  // CONTINUE BUTTON
   continueButton: {
     minHeight: 54,
     borderRadius: 13,
@@ -449,6 +531,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  // DISCLAIMER
   disclaimer: {
     marginTop: 17,
     textAlign: "center",

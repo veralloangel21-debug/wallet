@@ -31,12 +31,7 @@ export const PROFILE_MENU = [
     subtitle: "Manage your alerts",
     icon: "notifications-outline",
   },
-  {
-    id: "linked-accounts",
-    title: "Linked Accounts & Cards",
-    subtitle: "Connected payment methods",
-    icon: "card-outline",
-  },
+
   {
     id: "help",
     title: "Help & Support",

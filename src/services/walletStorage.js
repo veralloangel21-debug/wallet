@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const STARTING_BALANCE = 1250000; // ₱12,500.00 in centavos
+const STARTING_BALANCE = 0; // ₱0.00 for new accounts
 
 function walletKey(userId) {
   return `carry_demo_wallet_${userId}`;

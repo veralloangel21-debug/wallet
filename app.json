@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "e-wallet",
+    "name": "Carry",
     "slug": "e-wallet",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -29,9 +29,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#002818",
+          "image": "./assets/carry-logo.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#002818",
+            "image": "./assets/carry-logo.png"
+          }
         }
       ]
     ],

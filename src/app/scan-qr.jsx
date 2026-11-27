@@ -1,3 +1,4 @@
+
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,7 +12,11 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-import { Camera, CameraView, useCameraPermissions } from "expo-camera";
+import {
+  Camera,
+  CameraView,
+  useCameraPermissions,
+} from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -30,13 +35,16 @@ function usernameFromCarryQR(rawData) {
 
   const username = data.slice(prefix.length).trim();
 
-  return /^[a-zA-Z0-9._-]{1,40}$/.test(username) ? username : null;
+  return /^[a-zA-Z0-9._-]{1,40}$/.test(username)
+    ? username
+    : null;
 }
 
 export default function ScanQRScreen() {
   const router = useRouter();
 
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission] =
+    useCameraPermissions();
 
   const [walletId, setWalletId] = useState("");
   const [scanned, setScanned] = useState(false);
@@ -56,7 +64,7 @@ export default function ScanQRScreen() {
         scanLockedRef.current = true;
         setCameraActive(false);
       };
-    }, []),
+    }, [])
   );
 
   // OPEN SEND MONEY SCREEN
@@ -95,7 +103,7 @@ export default function ScanQRScreen() {
             text: "Scan Again",
             onPress: resetScanner,
           },
-        ],
+        ]
       );
 
       return;
@@ -111,12 +119,13 @@ export default function ScanQRScreen() {
     setPicking(true);
 
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
+      const result =
+        await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 1,
+        });
 
       if (result.canceled || !result.assets?.length) {
         return;
@@ -125,7 +134,11 @@ export default function ScanQRScreen() {
       const imageUri = result.assets[0].uri;
 
       // READ QR CODE FROM IMAGE
-      const foundCodes = await Camera.scanFromURLAsync(imageUri, ["qr"]);
+      const foundCodes =
+        await Camera.scanFromURLAsync(
+          imageUri,
+          ["qr"]
+        );
 
       const username = foundCodes
         .map((code) => usernameFromCarryQR(code.data))
@@ -134,7 +147,7 @@ export default function ScanQRScreen() {
       if (!username) {
         Alert.alert(
           "QR Not Found",
-          "No valid Carry wallet QR was detected. Try a clearer image and crop closely around the QR code.",
+          "No valid Carry wallet QR was detected. Try a clearer image and crop closely around the QR code."
         );
 
         return;
@@ -146,7 +159,7 @@ export default function ScanQRScreen() {
 
       Alert.alert(
         "Unable to Read QR",
-        "Try another QR image or enter the Wallet ID manually.",
+        "Try another QR image or enter the Wallet ID manually."
       );
     } finally {
       setPicking(false);
@@ -155,10 +168,15 @@ export default function ScanQRScreen() {
 
   // MANUAL WALLET ID
   function handleManualContinue() {
-    const username = walletId.trim().replace(/^@/, "");
+    const username = walletId
+      .trim()
+      .replace(/^@/, "");
 
     if (!/^[a-zA-Z0-9._-]{1,40}$/.test(username)) {
-      Alert.alert("Invalid Wallet ID", "Enter a valid Carry username.");
+      Alert.alert(
+        "Invalid Wallet ID",
+        "Enter a valid Carry username."
+      );
 
       return;
     }
@@ -166,7 +184,10 @@ export default function ScanQRScreen() {
     continueToPayment(username);
   }
 
-  const showCamera = permission?.granted && cameraActive && !picking;
+  const showCamera =
+    permission?.granted &&
+    cameraActive &&
+    !picking;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -179,24 +200,39 @@ export default function ScanQRScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} accessibilityLabel="Go back">
-            <Ionicons name="arrow-back" size={25} color={colors.text} />
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityLabel="Go back"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={25}
+              color={colors.text}
+            />
           </Pressable>
 
-          <Text style={styles.headerTitle}>Scan to Pay</Text>
+          <Text style={styles.headerTitle}>
+            Scan to Pay
+          </Text>
 
           <View style={{ width: 25 }} />
         </View>
 
         {/* TITLE */}
-        <Text style={styles.title}>Scan a Carry QR Code</Text>
+        <Text style={styles.title}>
+          Scan a Carry QR Code
+        </Text>
 
         <Text style={styles.subtitle}>
-          Scan another user's Carry QR code or choose a saved QR image.
+          Scan another user's Carry QR code or choose
+          a saved QR image.
         </Text>
 
         {/* CAMERA FRAME */}
-        <View style={styles.cameraFrame} collapsable={false}>
+        <View
+          style={styles.cameraFrame}
+          collapsable={false}
+        >
           {showCamera ? (
             <CameraView
               style={styles.cameraPreview}
@@ -204,9 +240,16 @@ export default function ScanQRScreen() {
               barcodeScannerSettings={{
                 barcodeTypes: ["qr"],
               }}
-              onBarcodeScanned={scanned ? undefined : handleLiveScan}
+              onBarcodeScanned={
+                scanned
+                  ? undefined
+                  : handleLiveScan
+              }
               onMountError={(event) => {
-                console.warn("Camera:", event?.message);
+                console.warn(
+                  "Camera:",
+                  event?.message
+                );
               }}
             />
           ) : (
@@ -229,7 +272,9 @@ export default function ScanQRScreen() {
                   style={styles.permissionButton}
                   onPress={requestPermission}
                 >
-                  <Text style={styles.permissionText}>Enable Camera</Text>
+                  <Text style={styles.permissionText}>
+                    Enable Camera
+                  </Text>
                 </Pressable>
               )}
             </View>
@@ -238,30 +283,47 @@ export default function ScanQRScreen() {
 
         {/* UPLOAD QR FROM GALLERY */}
         <Pressable
-          style={[styles.galleryButton, picking && styles.disabled]}
+          style={[
+            styles.galleryButton,
+            picking && styles.disabled,
+          ]}
           onPress={pickQRFromGallery}
           disabled={picking}
         >
           {picking ? (
-            <ActivityIndicator color={colors.primary} />
+            <ActivityIndicator
+              color={colors.primary}
+            />
           ) : (
-            <Ionicons name="images-outline" size={21} color={colors.primary} />
+            <Ionicons
+              name="images-outline"
+              size={21}
+              color={colors.primary}
+            />
           )}
 
           <Text style={styles.galleryText}>
-            {picking ? "Reading QR Image..." : "Upload QR from Gallery"}
+            {picking
+              ? "Reading QR Image..."
+              : "Upload QR from Gallery"}
           </Text>
         </Pressable>
 
         {/* MANUAL WALLET ID */}
-        <Text style={styles.manualTitle}>Or enter a Wallet ID</Text>
+        <Text style={styles.manualTitle}>
+          Or enter a Wallet ID
+        </Text>
 
         <Text style={styles.manualSubtitle}>
           Enter another Carry user's username.
         </Text>
 
         <View style={styles.inputRow}>
-          <Ionicons name="at-outline" size={21} color={colors.primary} />
+          <Ionicons
+            name="at-outline"
+            size={21}
+            color={colors.primary}
+          />
 
           <TextInput
             value={walletId}
@@ -275,15 +337,25 @@ export default function ScanQRScreen() {
         </View>
 
         {/* CONTINUE TO PAYMENT */}
-        <Pressable style={styles.continueButton} onPress={handleManualContinue}>
-          <Text style={styles.continueText}>Continue to Payment</Text>
+        <Pressable
+          style={styles.continueButton}
+          onPress={handleManualContinue}
+        >
+          <Text style={styles.continueText}>
+            Continue to Payment
+          </Text>
 
-          <Ionicons name="arrow-forward" size={20} color={colors.background} />
+          <Ionicons
+            name="arrow-forward"
+            size={20}
+            color={colors.background}
+          />
         </Pressable>
 
         {/* DISCLAIMER */}
         <Text style={styles.disclaimer}>
-          Carry QR payments are demo transfers. No real money is sent.
+          Carry QR payments are demo transfers.
+          No real money is sent.
         </Text>
       </ScrollView>
     </SafeAreaView>
